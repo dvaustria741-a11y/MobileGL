@@ -1,8 +1,9 @@
-name: MobileGL Plugin APK
+name: MobileGL ZEN Plugin APK
 
 on:
   push:
     branches:
+      - ZEN
       - dev
       - Feat/Backend-Direct-GLES
       - Feat/Backend-Direct-Vulkan
@@ -46,23 +47,41 @@ jobs:
         working-directory: 3rdparty/glslang
         run: python update_glslang_sources.py
 
-      - name: Build plugin APK
+      - name: Check signing secrets
+        id: signing_check
+        run: |
+          if [ -n "${{ secrets.SIGNING_STORE_PASSWORD }}" ] && \
+             [ -n "${{ secrets.SIGNING_KEY_ALIAS }}" ] && \
+             [ -n "${{ secrets.SIGNING_KEY_PASSWORD }}" ]; then
+            echo "signing_ready=true" >> "$GITHUB_OUTPUT"
+            echo "Signing secrets found — release APK will be signed."
+          else
+            echo "signing_ready=false" >> "$GITHUB_OUTPUT"
+            echo "No signing secrets — will produce unsigned debug APK."
+          fi
+
+      - name: Build signed release APK
+        if: steps.signing_check.outputs.signing_ready == 'true'
         run: gradle --no-daemon -p android-plugin :app:assembleRelease
         env:
           SIGNING_STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD }}
           SIGNING_KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS }}
           SIGNING_KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD }}
 
+      - name: Build unsigned debug APK (no signing secrets)
+        if: steps.signing_check.outputs.signing_ready == 'false'
+        run: gradle --no-daemon -p android-plugin :app:assembleDebug
+
       - name: Verify signed APK
+        if: steps.signing_check.outputs.signing_ready == 'true'
         run: |
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
           mapfile -t APKS < <(find android-plugin/app/build/outputs/apk -type f -path '*/release/*.apk' | sort)
           if [ "${#APKS[@]}" -eq 0 ]; then
-            echo "::error::No release APKs found under android-plugin/app/build/outputs/apk"
+            echo "::error::No release APKs found"
             find android-plugin/app/build/outputs/apk -type f -print || true
             exit 1
           fi
-
           for APK in "${APKS[@]}"; do
             if [[ "$APK" == *-unsigned.apk ]]; then
               echo "::error::Unsigned release APK produced: $APK"
@@ -71,10 +90,12 @@ jobs:
             "$APKSIGNER" verify --verbose "$APK"
           done
 
-      - name: Upload plugin APK
+      - name: Upload ZEN Plugin APK
         uses: actions/upload-artifact@v4
         with:
-          name: MobileGL-plugin-${{ env.date_today }}-${{ env.short_sha }}
+          name: MobileGL-ZEN-${{ env.date_today }}-${{ env.short_sha }}
           path: |
             android-plugin/app/build/outputs/apk/release/*.apk
+            android-plugin/app/build/outputs/apk/debug/*.apk
             android-plugin/app/build/outputs/apk/**/release/*.apk
+            android-plugin/app/build/outputs/apk/**/debug/*.apk
