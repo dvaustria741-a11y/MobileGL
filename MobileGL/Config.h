@@ -11,10 +11,10 @@
 #include <MG_Backend/BackendObjects.h>
 
 namespace MobileGL::MG_Config {
-    inline const String ProjectName = "MobileGL";
-    inline const String CoreName = "MobileGL Core";
-    inline const String CoreVendor = "MobileGL-Dev (BZLZHH, Swung0x48, Tungsten)";
-    inline const Version CoreVersion = {26, 6, 0, "-dev", VersionType::Development};
+    inline const String ProjectName = "MobileGL ZEN";
+    inline const String CoreName = "MobileGL ZEN Core";
+    inline const String CoreVendor = "MobileGL-Dev (BZLZHH, Swung0x48, Tungsten) | ZEN by Kai";
+    inline const Version CoreVersion = {26, 6, 0, "-ZEN", VersionType::Development};
     inline const VersionStringFormatAttrib DefaultVersionStringFormatAttrib = {2, 2, 0, true, true};
     inline const Uint64 CacheVersion = 0;
 
